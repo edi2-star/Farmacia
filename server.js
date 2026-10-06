@@ -15,8 +15,7 @@ async function iniciar() {
     await connectDB();
   } catch (err) {
     console.error('No se pudo conectar con MongoDB:', err.message);
-    console.error('Verifica que MongoDB este corriendo y que MONGODB_URI sea correcto.');
-    process.exit(1);
+    console.error('El servidor arrancara igualmente; las rutas que usan la base de datos fallaran hasta configurar MONGODB_URI correctamente.');
   }
 
   const servidor = app.listen(PORT, () => {
