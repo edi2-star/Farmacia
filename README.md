@@ -2,12 +2,12 @@
 
 Evaluación N.° 02 — Desarrollo de Aplicaciones Web Avanzado
 
-Aplicación web con **Node.js + Express + MongoDB (Mongoose) + EJS + JWT**, que implementa
+Aplicación web con **Node.js + Express + PostgreSQL (pg) + EJS + JWT**, que implementa
 autenticación por roles y el CRUD completo de **dos entidades relacionadas**:
 **Laboratorio 1 : N OrdenCompra**.
 
 - **Repositorio:** <https://github.com/edi2-star/Farmacia>
-- **Despliegue:** Render (Web Service) + MongoDB.
+- **Despliegue:** Render (Web Service) + PostgreSQL.
 - **Health check:** `GET /health`
 
 ---
@@ -18,15 +18,15 @@ Desarrollar una aplicación MVC profesional que cumpla la Evaluación N.° 02 de
 Aplicaciones Web Avanzado*:
 
 - Autenticación **JWT** (registro, login, logout, protección de rutas y roles).
-- Base de datos **bd_Farmacia** en MongoDB.
+- Base de datos **bd_Farmacia** en PostgreSQL.
 - Dos entidades relacionadas (**Laboratorio** y **OrdenCompra**) con relación 1:N.
 - **CRUD completo** (listar, crear, editar, eliminar y buscar).
 - Datos precargados mediante un **seed**.
 - Validaciones **en el frontend y en el backend**.
 - Interfaz con **Bootstrap 5** que cambia según el rol del usuario.
 
-> Nota: la evaluación original describía tablas SQL y Sequelize. En este proyecto se
-> sustituyen por **colecciones MongoDB** y **Mongoose**, respetando el diagrama original.
+> Nota: la evaluación original describía tablas SQL con Sequelize. En este proyecto se
+> usan **tablas PostgreSQL** mediante el driver **pg**, respetando el diagrama original.
 
 ---
 
@@ -35,7 +35,7 @@ Aplicaciones Web Avanzado*:
 | Capa | Tecnología |
 |------|------------|
 | Backend | Node.js + Express |
-| Base de datos | MongoDB + Mongoose |
+| Base de datos | PostgreSQL + pg |
 | Vistas | EJS |
 | Autenticación | JWT (jsonwebtoken) + cookies HttpOnly |
 | Seguridad de contraseñas | bcryptjs |
@@ -56,7 +56,7 @@ Aplicaciones Web Avanzado*:
 ├── README.md
 └── src/
     ├── config/
-    │   └── database.js        # Conexión centralizada a MongoDB
+    │   └── database.js        # Conexión centralizada a PostgreSQL (pg)
     ├── models/
     │   ├── Usuario.js
     │   ├── Laboratorio.js
@@ -104,7 +104,8 @@ Copia `.env.example` a `.env` y ajusta los valores:
 
 ```env
 PORT=4000
-MONGODB_URI=mongodb://127.0.0.1:27017/bd_Farmacia
+DATABASE_URL=postgresql://usuario:clave@127.0.0.1:5432/bd_Farmacia
+PGSSL=false
 JWT_SECRET=una_clave_segura
 JWT_EXPIRES_IN=2h
 ```
@@ -113,12 +114,13 @@ JWT_EXPIRES_IN=2h
 
 ---
 
-## 6. Cómo iniciar MongoDB
+## 6. Cómo iniciar PostgreSQL
 
-- **Local (Windows):** inicia el servicio *MongoDB* (`services.msc`) o ejecuta `mongod`.
-  Verifica que escuche en `127.0.0.1:27017`.
-- **MongoDB Atlas (producción):** crea un clúster y reemplaza `MONGODB_URI` por la cadena de
-  conexión de Atlas (`mongodb+srv://usuario:password@cluster/bd_Farmacia`).
+- **Local (Windows):** inicia el servicio *PostgreSQL* (`services.msc`) y crea la base
+  `bd_Farmacia`. Verifica que escuche en `127.0.0.1:5432`.
+- **Producción (Render):** crea una instancia de **PostgreSQL** en Render y usa su
+  `internalConnectionString` como `DATABASE_URL`. El esquema se crea automáticamente al
+  arrancar y los datos iniciales se cargan si la base está vacía.
   **No es necesario cambiar nada más en el código.**
 
 ---
@@ -191,11 +193,11 @@ Además de ocultar los botones, **el backend protege cada ruta** con `verifyToke
 Laboratorio (1) ────< OrdenCompra (N)
 ```
 
-- `OrdenCompra.CodLab` es una referencia `ObjectId` con `ref: 'Laboratorio'`.
-- En las vistas y en la API se usa `populate('CodLab')` para mostrar
+- `ordenes_compra.codlab` es una **clave foránea** (`FOREIGN KEY`) que referencia `laboratorios(id)`.
+- En las vistas y en la API la consulta hace un `LEFT JOIN` para mostrar
   `CodLab - razonSocial` del laboratorio.
 - Al crear/editar una orden, el formulario usa un **SELECT de laboratorios** y guarda
-  internamente el `_id` (nunca se escribe un ObjectId a mano).
+  internamente el `id` (nunca se escribe un id a mano).
 - No se permite eliminar un laboratorio que tenga órdenes asociadas.
 
 ### Modelo de datos
@@ -217,7 +219,7 @@ Laboratorio (1) ────< OrdenCompra (N)
 | fechaEmision | Date | obligatorio |
 | Situacion | String | obligatorio |
 | Total | Number | obligatorio, ≥ 0 |
-| CodLab | ObjectId → Laboratorio | obligatorio |
+| CodLab | INTEGER → laboratorios(id) | obligatorio, clave foránea |
 | NrofacturaProv | String | obligatorio |
 
 **Usuario** (auxiliar de autenticación)
@@ -262,22 +264,24 @@ La aplicación está preparada para desplegarse en **Render** como Web Service:
 - **Build Command:** `npm install` (o `npm ci` si se usa `package-lock.json`)
 - **Start Command:** `npm start`
 - **Health Check Path:** `/health`
-- **Variables de entorno en Render:** `MONGODB_URI`, `JWT_SECRET`, `JWT_EXPIRES_IN=2h`,
-  `NODE_ENV=production` (no definir `PORT`; Render lo inyecta).
+- **Variables de entorno en Render:** `DATABASE_URL` (cadena interna de PostgreSQL),
+  `PGSSL=false`, `JWT_SECRET`, `JWT_EXPIRES_IN=2h`, `NODE_ENV=production`
+  (no definir `PORT`; Render lo inyecta).
 
 **URL pública de producción:**
 
 ```
-(pendiente: se completará con la URL real una vez finalizado el despliegue en Render)
+https://farmacia-edi2-star.onrender.com
 ```
 
 Requisitos para publicar:
 
 1. Establecer `NODE_ENV=production`.
-2. Definir en el proveedor las variables `MONGODB_URI`, `JWT_SECRET`, `JWT_EXPIRES_IN` y `PORT`.
-- Usar **MongoDB Atlas** como base de datos en producción.
+2. Definir en el proveedor las variables `DATABASE_URL`, `PGSSL`, `JWT_SECRET`, `JWT_EXPIRES_IN` y `PORT`.
+- Usar **PostgreSQL** (Render PostgreSQL) como base de datos en producción.
 - `start` ya está listo (`node server.js`) y `process.env.PORT` se respeta.
 - No subir `.env` (ya está en `.gitignore`).
 - Las cookies se marcan `secure` automáticamente cuando `NODE_ENV=production` (requiere HTTPS).
+- Al arrancar, la app crea las tablas si no existen y carga los datos iniciales si la base está vacía.
 
-> No se modifica ningún servicio remoto (Atlas, Render, Vercel, Railway, etc.) sin autorización.
+> No se modifica ningún servicio remoto (Render, etc.) sin autorización.
