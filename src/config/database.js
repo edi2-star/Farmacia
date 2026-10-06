@@ -1,46 +1,99 @@
-const mongoose = require('mongoose');
+const { Pool } = require('pg');
 
-let cierreIntencional = false;
+let pool = null;
+let conectado = false;
 
-/**
- * Conexion centralizada a MongoDB.
- * Solo cambia la variable MONGODB_URI en .env para pasar de local a Atlas.
- */
+/** Lee la cadena de conexion (Render inyecta DATABASE_URL). */
+function obtenerCadena() {
+  return process.env.DATABASE_URL || '';
+}
+
+/** Activa SSL solo cuando corresponde (URL externa de Render / sslmode). */
+function opcionesSsl(cadena) {
+  if (process.env.PGSSL === 'false') return false;
+  if (process.env.PGSSL === 'true') return { rejectUnauthorized: false };
+  return /sslmode=require|\.render\.com|\.oregon-postgres/.test(cadena) ? { rejectUnauthorized: false } : false;
+}
+
+function crearPool() {
+  const cadena = obtenerCadena();
+  if (!cadena) {
+    throw new Error('DATABASE_URL no esta definida. Configura el archivo .env (ver .env.example).');
+  }
+  const nuevo = new Pool({ connectionString: cadena, ssl: opcionesSsl(cadena), max: 10 });
+  nuevo.on('error', (err) => console.error('PostgreSQL error de conexion:', err.message));
+  return nuevo;
+}
+
+/** Crea las tablas si no existen (equivalente a las colecciones de MongoDB). */
+async function inicializarEsquema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS usuarios (
+      id         SERIAL PRIMARY KEY,
+      nombre     VARCHAR(80)  NOT NULL,
+      email      VARCHAR(120) NOT NULL UNIQUE,
+      password   VARCHAR(120) NOT NULL,
+      role       VARCHAR(20)  NOT NULL DEFAULT 'usuario'
+                 CHECK (role IN ('administrador', 'moderador', 'usuario')),
+      creado_en  TIMESTAMPTZ  NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS laboratorios (
+      id           SERIAL PRIMARY KEY,
+      codlab       VARCHAR(20)  NOT NULL UNIQUE,
+      razonsocial  VARCHAR(120) NOT NULL,
+      direccion    VARCHAR(160) NOT NULL,
+      telefono     VARCHAR(20)  NOT NULL,
+      email        VARCHAR(120) NOT NULL,
+      contacto     VARCHAR(80)  NOT NULL,
+      creado_en    TIMESTAMPTZ  NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS ordenes_compra (
+      id              SERIAL PRIMARY KEY,
+      nroordenc       VARCHAR(30)  NOT NULL UNIQUE,
+      fechaemision    DATE         NOT NULL,
+      situacion       VARCHAR(40)  NOT NULL,
+      total           NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (total >= 0),
+      codlab          INTEGER      NOT NULL REFERENCES laboratorios(id),
+      nrofacturaprov  VARCHAR(40)  NOT NULL,
+      creado_en       TIMESTAMPTZ  NOT NULL DEFAULT now()
+    );
+  `);
+}
+
 async function connectDB() {
-  const uri = process.env.MONGODB_URI;
+  if (!pool) pool = crearPool();
+  await pool.query('SELECT 1');
+  await inicializarEsquema();
+  conectado = true;
 
-  if (!uri) {
-    throw new Error('MONGODB_URI no esta definida. Configura el archivo .env (ver .env.example).');
+  let host = 'desconocido';
+  try {
+    host = new URL(obtenerCadena()).host;
+  } catch (err) {
+    /* se deja 'desconocido' */
   }
-
-  mongoose.set('strictQuery', true);
-  cierreIntencional = false;
-
-  mongoose.connection.on('connected', () => {
-    console.log(`MongoDB conectado a: ${mongoose.connection.host}/${mongoose.connection.name}`);
-  });
-
-  mongoose.connection.on('disconnected', () => {
-    if (!cierreIntencional) console.warn('MongoDB: conexion perdida.');
-  });
-
-  mongoose.connection.on('error', (err) => {
-    console.error('MongoDB error de conexion:', err.message);
-  });
-
-  await mongoose.connect(uri);
-  return mongoose.connection;
+  console.log(`PostgreSQL conectado a: ${host}`);
+  return pool;
 }
 
-/**
- * Cierre apropiado de la conexion (senales del proceso / fallo critico).
- */
+async function query(texto, parametros) {
+  if (!pool) pool = crearPool();
+  return pool.query(texto, parametros);
+}
+
+function estaConectado() {
+  return conectado;
+}
+
 async function closeDB() {
-  if (mongoose.connection.readyState !== 0) {
-    cierreIntencional = true;
-    await mongoose.connection.close();
-    console.log('MongoDB: conexion cerrada correctamente.');
+  if (pool) {
+    await pool.end();
+    pool = null;
+    conectado = false;
+    console.log('PostgreSQL: conexion cerrada correctamente.');
   }
 }
 
-module.exports = { connectDB, closeDB };
+module.exports = { connectDB, query, estaConectado, closeDB };

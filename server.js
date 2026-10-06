@@ -14,8 +14,8 @@ async function iniciar() {
   try {
     await connectDB();
   } catch (err) {
-    console.error('No se pudo conectar con MongoDB:', err.message);
-    console.error('El servidor arrancara igualmente; las rutas que usan la base de datos fallaran hasta configurar MONGODB_URI correctamente.');
+    console.error('No se pudo conectar con PostgreSQL:', err.message);
+    console.error('El servidor arrancara igualmente; las rutas que usan la base de datos fallaran hasta configurar DATABASE_URL correctamente.');
   }
 
   const servidor = app.listen(PORT, () => {

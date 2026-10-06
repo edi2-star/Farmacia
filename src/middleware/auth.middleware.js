@@ -45,7 +45,7 @@ async function adjuntarUsuario(req, res, next) {
       return next();
     }
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    const usuario = await Usuario.findById(payload.id).select('-password');
+    const usuario = await Usuario.buscarPorId(payload.id);
     req.usuario = usuario || null;
   } catch (err) {
     req.usuario = null;
@@ -64,7 +64,7 @@ async function verifyToken(req, res, next) {
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    const usuario = await Usuario.findById(payload.id).select('-password');
+    const usuario = await Usuario.buscarPorId(payload.id);
     if (!usuario) {
       res.clearCookie('token');
       return redirigirLogin(req, res, true);

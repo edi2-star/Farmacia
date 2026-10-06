@@ -1,54 +1,49 @@
-const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const usuarioSchema = new mongoose.Schema(
-  {
-    nombre: {
-      type: String,
-      required: [true, 'El nombre es obligatorio'],
-      trim: true,
-      minlength: [2, 'El nombre debe tener al menos 2 caracteres'],
-      maxlength: [80, 'El nombre no puede superar los 80 caracteres'],
-    },
-    email: {
-      type: String,
-      required: [true, 'El email es obligatorio'],
-      unique: true,
-      lowercase: true,
-      trim: true,
-      match: [REGEX_EMAIL, 'El email no tiene un formato valido'],
-    },
-    password: {
-      type: String,
-      required: [true, 'La contrasena es obligatoria'],
-      minlength: [6, 'La contrasena debe tener al menos 6 caracteres'],
-      select: false,
-    },
-    role: {
-      type: String,
-      enum: {
-        values: ['administrador', 'moderador', 'usuario'],
-        message: 'Rol no valido',
-      },
-      default: 'usuario',
-    },
-  },
-  { timestamps: true }
-);
+const { query } = require('../config/database');
 
-usuarioSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (err) {
-    next(err);
-  }
-});
+/** Convierte una fila de la tabla usuarios al objeto usado por la app. */
+function mapear(fila) {
+  if (!fila) return null;
+  return {
+    _id: fila.id,
+    id: fila.id,
+    nombre: fila.nombre,
+    email: fila.email,
+    role: fila.role,
+    password: fila.password,
+  };
+}
 
-usuarioSchema.methods.compararPassword = function (passwordPlano) {
-  return bcrypt.compare(passwordPlano, this.password);
-};
+async function buscarPorEmail(email) {
+  const { rows } = await query('SELECT * FROM usuarios WHERE email = $1', [email]);
+  return mapear(rows[0]);
+}
 
-module.exports = mongoose.model('Usuario', usuarioSchema);
+async function buscarPorId(id) {
+  const { rows } = await query('SELECT * FROM usuarios WHERE id = $1', [id]);
+  return mapear(rows[0]);
+}
+
+async function crear({ nombre, email, password, role }) {
+  const hash = await require('bcryptjs').hash(String(password), 10);
+  const { rows } = await query(
+    'INSERT INTO usuarios (nombre, email, password, role) VALUES ($1, $2, $3, $4) RETURNING *',
+    [nombre, email, hash, role || 'usuario']
+  );
+  return mapear(rows[0]);
+}
+
+async function actualizarBasico(email, { nombre, role }) {
+  const { rows } = await query(
+    'UPDATE usuarios SET nombre = $1, role = $2 WHERE email = $3 RETURNING *',
+    [nombre, role, email]
+  );
+  return mapear(rows[0]);
+}
+
+function compararPassword(plano, hash) {
+  const bcrypt = require('bcryptjs');
+  return bcrypt.compare(String(plano), String(hash));
+}
+
+module.exports = { buscarPorEmail, buscarPorId, crear, actualizarBasico, compararPassword, mapear };

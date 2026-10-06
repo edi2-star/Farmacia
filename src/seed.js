@@ -1,7 +1,7 @@
 /**
- * Script de carga de datos iniciales (seed).
+ * Script de carga de datos iniciales (seed) sobre PostgreSQL.
  * Uso: npm run seed
- * No duplica registros: usa claves unicas (email, CodLab, NroOrdenC).
+ * No duplica registros: usa claves unicas (email, codlab, nroordenc).
  */
 require('dotenv').config();
 
@@ -27,7 +27,7 @@ const LABORATORIOS = [
   },
   {
     CodLab: 'LAB002',
-    razonSocial: 'Farmacéutica del Sur S.A.',
+    razonSocial: 'Farmaceutica del Sur S.A.',
     direccion: 'Jr. Bolognesi 220 - Arequipa',
     telefono: '054 223 344',
     email: 'ventas@delsur.pe',
@@ -35,47 +35,19 @@ const LABORATORIOS = [
   },
   {
     CodLab: 'LAB003',
-    razonSocial: 'Bioquímica Peruana E.I.R.L.',
+    razonSocial: 'Bioquimica Peruana E.I.R.L.',
     direccion: 'Calle Los Olivos 890 - Trujillo',
     telefono: '044 112 233',
     email: 'info@bioperu.pe',
-    contacto: 'Lucía Fernández',
+    contacto: 'Lucia Fernandez',
   },
 ];
 
 const ORDENES = [
-  {
-    NroOrdenC: 'OC-0001',
-    fechaEmision: '2026-09-15',
-    Situacion: 'Completada',
-    Total: 1450.5,
-    NrofacturaProv: 'F001-000120',
-    laboratorio: 'LAB001',
-  },
-  {
-    NroOrdenC: 'OC-0002',
-    fechaEmision: '2026-09-28',
-    Situacion: 'Pendiente',
-    Total: 890,
-    NrofacturaProv: 'F002-000455',
-    laboratorio: 'LAB002',
-  },
-  {
-    NroOrdenC: 'OC-0003',
-    fechaEmision: '2026-10-02',
-    Situacion: 'En proceso',
-    Total: 2320.75,
-    NrofacturaProv: 'F003-000087',
-    laboratorio: 'LAB003',
-  },
-  {
-    NroOrdenC: 'OC-0004',
-    fechaEmision: '2026-10-05',
-    Situacion: 'Pendiente',
-    Total: 540.9,
-    NrofacturaProv: 'F001-000131',
-    laboratorio: 'LAB001',
-  },
+  { NroOrdenC: 'OC-0001', fechaEmision: '2026-09-15', Situacion: 'Completada', Total: 1450.5, NrofacturaProv: 'F001-000120', laboratorio: 'LAB001' },
+  { NroOrdenC: 'OC-0002', fechaEmision: '2026-09-28', Situacion: 'Pendiente', Total: 890, NrofacturaProv: 'F002-000455', laboratorio: 'LAB002' },
+  { NroOrdenC: 'OC-0003', fechaEmision: '2026-10-02', Situacion: 'En proceso', Total: 2320.75, NrofacturaProv: 'F003-000087', laboratorio: 'LAB003' },
+  { NroOrdenC: 'OC-0004', fechaEmision: '2026-10-05', Situacion: 'Pendiente', Total: 540.9, NrofacturaProv: 'F001-000131', laboratorio: 'LAB001' },
 ];
 
 async function sembrarUsuarios() {
@@ -83,30 +55,13 @@ async function sembrarUsuarios() {
   let actualizados = 0;
 
   for (const dato of USUARIOS) {
-    const existente = await Usuario.findOne({ email: dato.email });
+    const existente = await Usuario.buscarPorEmail(dato.email);
     if (existente) {
-      let cambios = false;
-      if (existente.role !== dato.role) {
-        existente.role = dato.role;
-        cambios = true;
-      }
-      if (existente.nombre !== dato.nombre) {
-        existente.nombre = dato.nombre;
-        cambios = true;
-      }
-      if (cambios) {
-        await existente.save();
-        actualizados += 1;
-      }
+      await Usuario.actualizarBasico(dato.email, { nombre: dato.nombre, role: dato.role });
+      actualizados += 1;
       continue;
     }
-
-    await Usuario.create({
-      nombre: dato.nombre,
-      email: dato.email,
-      password: dato.password,
-      role: dato.role,
-    });
+    await Usuario.crear(dato);
     creados += 1;
   }
 
@@ -118,48 +73,44 @@ async function sembrarLaboratorios() {
   let actualizados = 0;
 
   for (const dato of LABORATORIOS) {
-    const existente = await Laboratorio.findOne({ CodLab: dato.CodLab });
+    const existente = await Laboratorio.buscarPorCodigo(dato.CodLab);
     if (existente) {
-      Object.assign(existente, dato);
-      await existente.save();
+      await Laboratorio.actualizar(existente._id, dato);
       actualizados += 1;
       continue;
     }
-    await Laboratorio.create(dato);
+    await Laboratorio.crear(dato);
     creados += 1;
   }
 
   console.log(`Laboratorios: ${creados} creados, ${actualizados} actualizados.`);
-  return Laboratorio.find().select('CodLab').lean();
 }
 
-async function sembrarOrdenes(laboratorios) {
-  const porCodigo = new Map(laboratorios.map((lab) => [lab.CodLab, lab._id]));
+async function sembrarOrdenes() {
   let creadas = 0;
   let actualizadas = 0;
 
   for (const dato of ORDENES) {
-    const idLab = porCodigo.get(dato.laboratorio);
-    if (!idLab) continue;
+    const laboratorio = await Laboratorio.buscarPorCodigo(dato.laboratorio);
+    if (!laboratorio) continue;
 
-    const existente = await OrdenCompra.findOne({ NroOrdenC: dato.NroOrdenC });
     const registro = {
       NroOrdenC: dato.NroOrdenC,
       fechaEmision: dato.fechaEmision,
       Situacion: dato.Situacion,
       Total: dato.Total,
+      CodLab: laboratorio._id,
       NrofacturaProv: dato.NrofacturaProv,
-      CodLab: idLab,
     };
 
-    if (existente) {
-      Object.assign(existente, registro);
-      await existente.save();
+    const idExistente = await OrdenCompra.buscarIdPorNumero(dato.NroOrdenC);
+    if (idExistente) {
+      await OrdenCompra.actualizar(idExistente, registro);
       actualizadas += 1;
       continue;
     }
 
-    await OrdenCompra.create(registro);
+    await OrdenCompra.crear(registro);
     creadas += 1;
   }
 
@@ -169,11 +120,11 @@ async function sembrarOrdenes(laboratorios) {
 async function main() {
   try {
     await connectDB();
-    console.log('Cargando datos iniciales en bd_Farmacia...');
+    console.log('Cargando datos iniciales en PostgreSQL (bd_Farmacia)...');
 
     await sembrarUsuarios();
-    const laboratorios = await sembrarLaboratorios();
-    await sembrarOrdenes(laboratorios);
+    await sembrarLaboratorios();
+    await sembrarOrdenes();
 
     console.log('Seed finalizado correctamente.');
   } catch (err) {

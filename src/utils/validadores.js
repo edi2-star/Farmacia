@@ -63,7 +63,7 @@ function validarOrdenCompra(datos) {
   }
 
   if (!CodLab) errores.CodLab = 'El laboratorio es obligatorio.';
-  else if (!/^[0-9a-fA-F]{24}$/.test(CodLab)) errores.CodLab = 'Selecciona un laboratorio valido.';
+  else if (!/^\d+$/.test(CodLab)) errores.CodLab = 'Selecciona un laboratorio valido.';
 
   if (!NrofacturaProv) errores.NrofacturaProv = 'El numero de factura del proveedor es obligatorio.';
 
@@ -106,17 +106,27 @@ function validarLogin(datos) {
   return errores;
 }
 
-/** Convierte errores de Mongoose en { campo: mensaje }. */
-function erroresDeMongoose(err) {
+/** Mapea el nombre de una restriccion UNIQUE de PostgreSQL al campo del formulario. */
+const CAMPO_POR_RESTRICCION = {
+  usuarios_email_key: 'email',
+  laboratorios_codlab_key: 'CodLab',
+  ordenes_compra_nroordenc_key: 'NroOrdenC',
+};
+
+/** Convierte errores de PostgreSQL (pg) en { campo: mensaje }. */
+function erroresDePg(err) {
   const salida = {};
-  if (err && err.errors) {
-    Object.keys(err.errors).forEach((campo) => {
-      salida[campo] = err.errors[campo].message;
-    });
-  }
-  if (err && err.code === 11000) {
-    const campo = Object.keys(err.keyValue || { campo: 1 })[0];
-    salida[campo] = `Ya existe un registro con ese ${campo}.`;
+  if (!err || !err.code) return salida;
+
+  if (err.code === '23505') {
+    const campo = CAMPO_POR_RESTRICCION[err.constraint] || 'campo';
+    salida[campo] = 'Ya existe un registro con ese valor.';
+  } else if (err.code === '23503') {
+    salida.CodLab = 'El laboratorio seleccionado no existe.';
+  } else if (err.code === '23502') {
+    salida[err.column || 'campo'] = 'Este campo es obligatorio.';
+  } else if (err.code === '23514') {
+    salida.Total = 'El valor no cumple las reglas permitidas.';
   }
   return salida;
 }
@@ -129,5 +139,5 @@ module.exports = {
   validarOrdenCompra,
   validarRegistro,
   validarLogin,
-  erroresDeMongoose,
+  erroresDePg,
 };

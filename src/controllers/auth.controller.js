@@ -1,6 +1,6 @@
 const Usuario = require('../models/Usuario');
 const { opcionesCookie, duracionCookie } = require('../middleware/auth.middleware');
-const { validarRegistro, validarLogin, erroresDeMongoose, soloTexto } = require('../utils/validadores');
+const { validarRegistro, validarLogin, erroresDePg, soloTexto } = require('../utils/validadores');
 const { redirigirCon } = require('../middleware/flash.middleware');
 
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -26,7 +26,7 @@ async function registrar(req, res) {
   const errores = validarRegistro(datos);
 
   if (Object.keys(errores).length === 0) {
-    const existe = await Usuario.findOne({ email: datos.email });
+    const existe = await Usuario.buscarPorEmail(datos.email);
     if (existe) errores.email = 'Ese email ya esta registrado.';
   }
 
@@ -39,7 +39,7 @@ async function registrar(req, res) {
   }
 
   try {
-    await Usuario.create({
+    await Usuario.crear({
       nombre: datos.nombre,
       email: datos.email,
       password: datos.password,
@@ -47,12 +47,12 @@ async function registrar(req, res) {
     });
     return redirigirCon(res, '/login', 'exito', 'Cuenta creada correctamente. Ya puedes iniciar sesion.');
   } catch (err) {
-    const erroresMongo = erroresDeMongoose(err);
-    if (Object.keys(erroresMongo).length > 0) {
+    const erroresBd = erroresDePg(err);
+    if (Object.keys(erroresBd).length > 0) {
       return res.status(400).render('auth/registro', {
         titulo: 'Registro',
         datos: { nombre: datos.nombre, email: datos.email },
-        errores: erroresMongo,
+        errores: erroresBd,
       });
     }
     throw err;
@@ -82,8 +82,8 @@ async function login(req, res) {
     });
   }
 
-  const usuario = await Usuario.findOne({ email }).select('+password');
-  if (!usuario || !(await usuario.compararPassword(password))) {
+  const usuario = await Usuario.buscarPorEmail(email);
+  if (!usuario || !(await Usuario.compararPassword(password, usuario.password))) {
     return res.status(401).render('auth/login', {
       titulo: 'Iniciar sesion',
       datos: { email },

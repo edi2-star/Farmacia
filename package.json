@@ -1,7 +1,7 @@
 {
   "name": "evaluacion2-farmacia",
   "version": "1.0.0",
-  "description": "Evaluacion N.02 - Desarrollo de Aplicaciones Web Avanzado: CRUD MongoDB (Laboratorio 1:N OrdenCompra) con JWT y roles.",
+  "description": "Evaluacion N.02 - Desarrollo de Aplicaciones Web Avanzado: CRUD PostgreSQL (Laboratorio 1:N OrdenCompra) con JWT y roles.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -10,8 +10,8 @@
   },
   "keywords": [
     "express",
-    "mongodb",
-    "mongoose",
+    "postgresql",
+    "pg",
     "jwt",
     "ejs",
     "crud"
@@ -25,7 +25,7 @@
     "ejs": "^3.1.10",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.5.2"
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"

@@ -1,17 +1,10 @@
 const OrdenCompra = require('../models/OrdenCompra');
 const Laboratorio = require('../models/Laboratorio');
-const { validarOrdenCompra, erroresDeMongoose, soloTexto } = require('../utils/validadores');
-const { escaparRegex } = require('./laboratorio.controller');
+const { validarOrdenCompra, erroresDePg, soloTexto } = require('../utils/validadores');
 
-const POBLAR = { path: 'CodLab', select: 'CodLab razonSocial' };
-
-/** GET /ordenes-compra - pagina del listado. */
+/** GET /ordenes-compra - pagina del listado (con laboratorio asociado). */
 async function mostrarListado(req, res) {
-  const [datos, laboratorios] = await Promise.all([
-    OrdenCompra.find().populate(POBLAR).sort({ fechaEmision: -1, NroOrdenC: 1 }).lean(),
-    Laboratorio.find().sort({ CodLab: 1 }).lean(),
-  ]);
-
+  const [datos, laboratorios] = await Promise.all([OrdenCompra.listar(), Laboratorio.listar()]);
   res.render('ordenCompra/index', {
     titulo: 'Ordenes de compra',
     datos,
@@ -21,29 +14,19 @@ async function mostrarListado(req, res) {
   });
 }
 
-/** GET /api/ordenes-compra - listado con populate + buscador. */
+/** GET /api/ordenes-compra - listado con laboratorio asociado y buscador. */
 async function listar(req, res) {
   const q = soloTexto(req.query.q);
-  const filtro = {};
-
-  if (q) {
-    const rx = new RegExp(escaparRegex(q), 'i');
-    const labs = await Laboratorio.find({ $or: [{ CodLab: rx }, { razonSocial: rx }] }).select('_id').lean();
-    filtro.$or = [
-      { NroOrdenC: rx },
-      { Situacion: rx },
-      { NrofacturaProv: rx },
-      { CodLab: { $in: labs.map((l) => l._id) } },
-    ];
-  }
-
-  const datos = await OrdenCompra.find(filtro).populate(POBLAR).sort({ fechaEmision: -1, NroOrdenC: 1 }).lean();
+  const datos = await OrdenCompra.buscar(q);
   res.json({ ok: true, datos });
 }
 
 /** GET /api/ordenes-compra/:id */
 async function obtener(req, res) {
-  const dato = await OrdenCompra.findById(req.params.id).populate(POBLAR).lean();
+  if (!/^\d+$/.test(String(req.params.id))) {
+    return res.status(404).json({ ok: false, mensaje: 'Orden de compra no encontrada.' });
+  }
+  const dato = await OrdenCompra.buscarPorId(req.params.id);
   if (!dato) return res.status(404).json({ ok: false, mensaje: 'Orden de compra no encontrada.' });
   return res.json({ ok: true, datos: dato });
 }
@@ -58,39 +41,37 @@ async function crear(req, res) {
   const NroOrdenC = soloTexto(req.body.NroOrdenC).toUpperCase();
 
   try {
-    const existente = await OrdenCompra.findOne({ NroOrdenC });
-    if (existente) {
+    if (await OrdenCompra.existeNumero(NroOrdenC)) {
       return res.status(400).json({
         ok: false,
         errores: { NroOrdenC: 'Ya existe una orden de compra con ese numero.' },
-        mensaje: 'Numero de orden duplicado.',
+        mensaje: 'No se pudo guardar la orden.',
       });
     }
 
-    const laboratorio = await Laboratorio.findById(soloTexto(req.body.CodLab));
+    const laboratorio = await Laboratorio.buscarPorId(soloTexto(req.body.CodLab));
     if (!laboratorio) {
       return res.status(400).json({
         ok: false,
         errores: { CodLab: 'El laboratorio seleccionado no existe.' },
-        mensaje: 'Laboratorio invalido.',
+        mensaje: 'No se pudo guardar la orden.',
       });
     }
 
-    const creado = await OrdenCompra.create({
+    const creado = await OrdenCompra.crear({
       NroOrdenC,
-      fechaEmision: req.body.fechaEmision,
+      fechaEmision: soloTexto(req.body.fechaEmision),
       Situacion: soloTexto(req.body.Situacion),
       Total: Number(req.body.Total),
       CodLab: laboratorio._id,
       NrofacturaProv: soloTexto(req.body.NrofacturaProv),
     });
 
-    const conLab = await OrdenCompra.findById(creado._id).populate(POBLAR).lean();
-    return res.status(201).json({ ok: true, mensaje: 'Orden de compra registrada correctamente.', datos: conLab });
+    return res.status(201).json({ ok: true, mensaje: 'Orden de compra registrada correctamente.', datos: creado });
   } catch (err) {
-    const erroresMongo = erroresDeMongoose(err);
-    if (Object.keys(erroresMongo).length > 0) {
-      return res.status(400).json({ ok: false, errores: erroresMongo, mensaje: 'No se pudo guardar la orden.' });
+    const erroresBd = erroresDePg(err);
+    if (Object.keys(erroresBd).length > 0) {
+      return res.status(400).json({ ok: false, errores: erroresBd, mensaje: 'No se pudo guardar la orden.' });
     }
     throw err;
   }
@@ -106,45 +87,39 @@ async function actualizar(req, res) {
   const NroOrdenC = soloTexto(req.body.NroOrdenC).toUpperCase();
 
   try {
-    const duplicada = await OrdenCompra.findOne({ NroOrdenC, _id: { $ne: req.params.id } });
-    if (duplicada) {
+    if (await OrdenCompra.existeNumero(NroOrdenC, req.params.id)) {
       return res.status(400).json({
         ok: false,
         errores: { NroOrdenC: 'Ya existe otra orden con ese numero.' },
-        mensaje: 'Numero de orden duplicado.',
+        mensaje: 'No se pudo guardar la orden.',
       });
     }
 
-    const laboratorio = await Laboratorio.findById(soloTexto(req.body.CodLab));
+    const laboratorio = await Laboratorio.buscarPorId(soloTexto(req.body.CodLab));
     if (!laboratorio) {
       return res.status(400).json({
         ok: false,
         errores: { CodLab: 'El laboratorio seleccionado no existe.' },
-        mensaje: 'Laboratorio invalido.',
+        mensaje: 'No se pudo guardar la orden.',
       });
     }
 
-    const actualizado = await OrdenCompra.findByIdAndUpdate(
-      req.params.id,
-      {
-        NroOrdenC,
-        fechaEmision: req.body.fechaEmision,
-        Situacion: soloTexto(req.body.Situacion),
-        Total: Number(req.body.Total),
-        CodLab: laboratorio._id,
-        NrofacturaProv: soloTexto(req.body.NrofacturaProv),
-      },
-      { new: true, runValidators: true }
-    );
+    const actualizado = await OrdenCompra.actualizar(req.params.id, {
+      NroOrdenC,
+      fechaEmision: soloTexto(req.body.fechaEmision),
+      Situacion: soloTexto(req.body.Situacion),
+      Total: Number(req.body.Total),
+      CodLab: laboratorio._id,
+      NrofacturaProv: soloTexto(req.body.NrofacturaProv),
+    });
 
     if (!actualizado) return res.status(404).json({ ok: false, mensaje: 'Orden de compra no encontrada.' });
 
-    const conLab = await OrdenCompra.findById(actualizado._id).populate(POBLAR).lean();
-    return res.json({ ok: true, mensaje: 'Orden de compra actualizada correctamente.', datos: conLab });
+    return res.json({ ok: true, mensaje: 'Orden de compra actualizada correctamente.', datos: actualizado });
   } catch (err) {
-    const erroresMongo = erroresDeMongoose(err);
-    if (Object.keys(erroresMongo).length > 0) {
-      return res.status(400).json({ ok: false, errores: erroresMongo, mensaje: 'No se pudo actualizar la orden.' });
+    const erroresBd = erroresDePg(err);
+    if (Object.keys(erroresBd).length > 0) {
+      return res.status(400).json({ ok: false, errores: erroresBd, mensaje: 'No se pudo guardar la orden.' });
     }
     throw err;
   }
@@ -152,16 +127,9 @@ async function actualizar(req, res) {
 
 /** DELETE /api/ordenes-compra/:id - solo administrador (por middleware). */
 async function eliminar(req, res) {
-  const orden = await OrdenCompra.findByIdAndDelete(req.params.id);
-  if (!orden) return res.status(404).json({ ok: false, mensaje: 'Orden de compra no encontrada.' });
+  const eliminado = await OrdenCompra.eliminar(req.params.id);
+  if (!eliminado) return res.status(404).json({ ok: false, mensaje: 'Orden de compra no encontrada.' });
   return res.json({ ok: true, mensaje: 'Orden de compra eliminada correctamente.' });
 }
 
-module.exports = {
-  mostrarListado,
-  listar,
-  obtener,
-  crear,
-  actualizar,
-  eliminar,
-};
+module.exports = { mostrarListado, listar, obtener, crear, actualizar, eliminar };
