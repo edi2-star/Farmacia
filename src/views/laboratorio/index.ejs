@@ -1,0 +1,165 @@
+<%- include('../partials/head', { titulo: titulo }) %>
+<%- include('../partials/navbar', { mostrarBuscador: mostrarBuscador }) %>
+
+<main class="container py-4">
+  <%- include('../partials/messages') %>
+
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h1 class="h4 mb-0">Laboratorios</h1>
+      <span class="small text-muted">Total: <%= datos.length %> registro(s)</span>
+    </div>
+
+    <% if (usuario.role === 'administrador' || usuario.role === 'moderador') { %>
+      <button type="button" class="btn btn-danger" id="btnNuevoLaboratorio" data-abrir-crear>
+        <i class="bi bi-plus-lg me-1"></i> Nuevo Laboratorio
+      </button>
+    <% } %>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle tabla-listado" id="tablaLaboratorios">
+      <thead>
+        <tr>
+          <th>Codigo</th>
+          <th>Razon Social</th>
+          <th>Direccion</th>
+          <th>Telefono</th>
+          <th>Email</th>
+          <th>Contacto</th>
+          <th class="text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!datos.length) { %>
+          <tr class="fila-vacia">
+            <td colspan="7" class="text-center text-muted py-4">
+              <i class="bi bi-inbox d-block fs-3 mb-1"></i>
+              No hay laboratorios registrados.
+            </td>
+          </tr>
+        <% } %>
+
+        <% datos.forEach(function (lab) { %>
+          <tr>
+            <td><span class="badge text-bg-light border"><%= lab.CodLab %></span></td>
+            <td><%= lab.razonSocial %></td>
+            <td><%= lab.direccion %></td>
+            <td><%= lab.telefono %></td>
+            <td><a href="mailto:<%= lab.email %>" class="link-underline link-underline-opacity-0"><%= lab.email %></a></td>
+            <td><%= lab.contacto %></td>
+            <td class="text-center text-nowrap celda-acciones">
+              <% if (usuario.role === 'administrador' || usuario.role === 'moderador') { %>
+                <button type="button"
+                        class="btn btn-sm btn-accion-editar"
+                        title="Editar"
+                        data-accion="editar"
+                        data-id="<%= lab._id %>"
+                        data-codlab="<%= lab.CodLab %>"
+                        data-razonsocial="<%= lab.razonSocial %>"
+                        data-direccion="<%= lab.direccion %>"
+                        data-telefono="<%= lab.telefono %>"
+                        data-email="<%= lab.email %>"
+                        data-contacto="<%= lab.contacto %>">
+                  <i class="bi bi-pencil"></i>
+                </button>
+              <% } %>
+
+              <% if (usuario.role === 'administrador') { %>
+                <button type="button"
+                        class="btn btn-sm btn-accion-eliminar ms-1"
+                        title="Eliminar"
+                        data-accion="eliminar"
+                        data-id="<%= lab._id %>"
+                        data-codlab="<%= lab.CodLab %>"
+                        data-razonsocial="<%= lab.razonSocial %>">
+                  <i class="bi bi-trash"></i>
+                </button>
+              <% } %>
+
+              <% if (usuario.role === 'usuario') { %>
+                <span class="text-muted small">solo consulta</span>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="small text-muted mt-2">
+    <i class="bi bi-info-circle me-1"></i>
+    Usa el buscador de la barra superior para filtrar el listado actual.
+  </p>
+</main>
+
+<% if (usuario.role === 'administrador' || usuario.role === 'moderador') { %>
+<!-- Modal crear / editar -->
+<div class="modal fade" id="modalLaboratorio" tabindex="-1" aria-labelledby="tituloModalLaboratorio" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <form class="modal-content" id="formLaboratorio" data-validar="form-laboratorio" novalidate>
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="tituloModalLaboratorio">Nuevo Laboratorio</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="alertaModalLaboratorio" role="alert"></div>
+
+        <input type="hidden" name="id" id="labId" value="">
+
+        <div class="mb-3">
+          <label for="CodLab" class="form-label">Codigo <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="CodLab" name="CodLab" maxlength="20"
+                 placeholder="Ej. LAB001" autocomplete="off">
+          <div class="invalid-feedback"></div>
+        </div>
+
+        <div class="mb-3">
+          <label for="razonSocial" class="form-label">Razon Social <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="razonSocial" name="razonSocial" maxlength="120"
+                 placeholder="Nombre del laboratorio">
+          <div class="invalid-feedback"></div>
+        </div>
+
+        <div class="mb-3">
+          <label for="direccion" class="form-label">Direccion <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="direccion" name="direccion" maxlength="160"
+                 placeholder="Calle, numero, distrito">
+          <div class="invalid-feedback"></div>
+        </div>
+
+        <div class="mb-3">
+          <label for="telefono" class="form-label">Telefono <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="telefono" name="telefono" maxlength="20"
+                 placeholder="Ej. 01 234 5678">
+          <div class="invalid-feedback"></div>
+        </div>
+
+        <div class="mb-3">
+          <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+          <input type="email" class="form-control" id="email" name="email" maxlength="120"
+                 placeholder="contacto@laboratorio.com">
+          <div class="invalid-feedback"></div>
+        </div>
+
+        <div class="mb-2">
+          <label for="contacto" class="form-label">Contacto <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="contacto" name="contacto" maxlength="80"
+                 placeholder="Persona de contacto">
+          <div class="invalid-feedback"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btnGuardarLaboratorio">
+          <i class="bi bi-save me-1"></i> Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+<% } %>
+
+<%- include('../partials/footer', { script: 'laboratorio.js' }) %>

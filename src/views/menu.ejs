@@ -1,0 +1,90 @@
+<%- include('partials/head', { titulo: titulo }) %>
+<%- include('partials/navbar', { mostrarBuscador: false }) %>
+
+<main class="container py-4">
+  <%- include('partials/messages') %>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+      <h1 class="h4 mb-1">Bienvenido(a), <span class="text-primary"><%= usuario.nombre %></span></h1>
+      <p class="mb-2 text-muted">
+        Correo: <%= usuario.email %> &middot;
+        Rol:
+        <span class="badge <%= usuario.role === 'administrador' ? 'text-bg-danger' : (usuario.role === 'moderador' ? 'text-bg-warning' : 'text-bg-success') %>">
+          <%= usuario.role %>
+        </span>
+      </p>
+      <p class="mb-0 small text-muted">
+        Sistema de gestion farmaceutica &mdash; base de datos <code>bd_Farmacia</code> (MongoDB).
+        Relacion: <strong>Laboratorio 1 &rarr; N Ordenes de compra</strong>.
+      </p>
+    </div>
+  </div>
+
+  <h2 class="h5 mb-3">Accesos disponibles</h2>
+
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-2">
+            <span class="icono-caja me-2"><i class="bi bi-buildings"></i></span>
+            <h3 class="h6 mb-0">Laboratorios</h3>
+          </div>
+          <p class="small text-muted">
+            <% if (usuario.role === 'usuario') { %>
+              Consulta del listado de laboratorios (solo lectura).
+            <% } else { %>
+              Alta, edicion, eliminacion y busqueda de laboratorios.
+            <% } %>
+          </p>
+          <a href="/laboratorios" class="btn btn-sm btn-outline-primary w-100">
+            <i class="bi bi-arrow-right-circle me-1"></i> Abrir listado
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-2">
+            <span class="icono-caja me-2"><i class="bi bi-cart-check"></i></span>
+            <h3 class="h6 mb-0">Ordenes de compra</h3>
+          </div>
+          <p class="small text-muted">
+            <% if (usuario.role === 'usuario') { %>
+              Consulta de ordenes asociadas a cada laboratorio (solo lectura).
+            <% } else { %>
+              Alta, edicion, eliminacion y busqueda de ordenes de compra.
+            <% } %>
+          </p>
+          <a href="/ordenes-compra" class="btn btn-sm btn-outline-primary w-100">
+            <i class="bi bi-arrow-right-circle me-1"></i> Abrir listado
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-2">
+            <span class="icono-caja me-2"><i class="bi bi-shield-lock"></i></span>
+            <h3 class="h6 mb-0">Permisos por rol</h3>
+          </div>
+          <ul class="small text-muted mb-2 ps-3">
+            <li><strong>administrador:</strong> CRUD completo (incluye eliminar).</li>
+            <li><strong>moderador:</strong> crear, editar y consultar.</li>
+            <li><strong>usuario:</strong> solo consulta.</li>
+          </ul>
+          <a href="/logout" class="btn btn-sm btn-outline-secondary w-100">
+            <i class="bi bi-box-arrow-right me-1"></i> Cerrar sesion
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<%- include('partials/footer') %>

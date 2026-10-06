@@ -1,0 +1,72 @@
+<nav class="navbar navbar-expand-lg navbar-dark app-navbar">
+  <div class="container">
+    <a class="navbar-brand brand-stack" href="/menu">Stack</a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPrincipal"
+            aria-controls="menuPrincipal" aria-expanded="false" aria-label="Alternar navegacion">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="menuPrincipal">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link" href="/menu">Inicio</a>
+        </li>
+
+        <% if (usuario && (usuario.role === 'administrador' || usuario.role === 'moderador')) { %>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="navCompras" role="button"
+               data-bs-toggle="dropdown" aria-expanded="false">Compras</a>
+            <ul class="dropdown-menu" aria-labelledby="navCompras">
+              <li><a class="dropdown-item" href="/ordenes-compra">Ordenes de compra</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="navAlmacen" role="button"
+               data-bs-toggle="dropdown" aria-expanded="false">Almacen</a>
+            <ul class="dropdown-menu" aria-labelledby="navAlmacen">
+              <li><a class="dropdown-item" href="/laboratorios">Laboratorios</a></li>
+            </ul>
+          </li>
+        <% } else if (usuario && usuario.role === 'usuario') { %>
+          <li class="nav-item"><a class="nav-link" href="/laboratorios">Laboratorios</a></li>
+          <li class="nav-item"><a class="nav-link" href="/ordenes-compra">Ordenes de compra</a></li>
+        <% } %>
+      </ul>
+
+      <% if (typeof mostrarBuscador !== 'undefined' && mostrarBuscador) { %>
+        <form class="d-flex align-items-center gap-2 mb-2 mb-lg-0" id="formBusqueda" role="search" novalidate>
+          <input class="form-control form-control-buscar" type="search" id="campoBusqueda"
+                 placeholder="Buscar" aria-label="Buscar" autocomplete="off">
+          <button class="btn btn-buscar" type="submit">Busqueda</button>
+        </form>
+      <% } %>
+
+      <% if (usuario) { %>
+        <ul class="navbar-nav ms-lg-3 align-items-lg-center">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-person-circle"></i> <%= usuario.nombre %>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li>
+                <span class="dropdown-item-text">
+                  Rol:
+                  <span class="badge <%= usuario.role === 'administrador' ? 'text-bg-danger' : (usuario.role === 'moderador' ? 'text-bg-warning' : 'text-bg-success') %>">
+                    <%= usuario.role %>
+                  </span>
+                </span>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <a class="dropdown-item" href="/logout" data-accion="salir">
+                  <i class="bi bi-box-arrow-right"></i> Cerrar sesion
+                </a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      <% } %>
+    </div>
+  </div>
+</nav>

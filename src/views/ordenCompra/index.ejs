@@ -1,0 +1,190 @@
+<%- include('../partials/head', { titulo: titulo }) %>
+<%- include('../partials/navbar', { mostrarBuscador: mostrarBuscador }) %>
+
+<main class="container py-4">
+  <%- include('../partials/messages') %>
+
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h1 class="h4 mb-0">Ordenes de compra</h1>
+      <span class="small text-muted">Total: <%= datos.length %> registro(s)</span>
+    </div>
+
+    <% if (usuario.role === 'administrador' || usuario.role === 'moderador') { %>
+      <button type="button" class="btn btn-danger" id="btnNuevaOrden" data-abrir-crear>
+        <i class="bi bi-plus-lg me-1"></i> Nueva Orden de Compra
+      </button>
+    <% } %>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle tabla-listado" id="tablaOrdenes">
+      <thead>
+        <tr>
+          <th>Nro. Orden</th>
+          <th>Fecha emision</th>
+          <th>Situacion</th>
+          <th>Total</th>
+          <th>Laboratorio</th>
+          <th>Nro. factura proveedor</th>
+          <th class="text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!datos.length) { %>
+          <tr class="fila-vacia">
+            <td colspan="7" class="text-center text-muted py-4">
+              <i class="bi bi-inbox d-block fs-3 mb-1"></i>
+              No hay ordenes de compra registradas.
+            </td>
+          </tr>
+        <% } %>
+
+        <% datos.forEach(function (orden) { %>
+          <% const lab = orden.CodLab; %>
+          <tr>
+            <td><span class="badge text-bg-light border"><%= orden.NroOrdenC %></span></td>
+            <td>
+              <% const f = new Date(orden.fechaEmision); %>
+              <% if (!Number.isNaN(f.getTime())) { %>
+                <%= f.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }) %>
+              <% } else { %>
+                <%= orden.fechaEmision %>
+              <% } %>
+            </td>
+            <td>
+              <span class="badge <%= orden.Situacion === 'Completada' ? 'text-bg-success' : (orden.Situacion === 'Anulada' ? 'text-bg-danger' : 'text-bg-warning text-dark') %>">
+                <%= orden.Situacion %>
+              </span>
+            </td>
+            <td class="text-end">S/ <%= Number(orden.Total).toFixed(2) %></td>
+            <td>
+              <% if (lab) { %>
+                <span class="fw-semibold"><%= lab.CodLab %></span> &mdash; <%= lab.razonSocial %>
+              <% } else { %>
+                <span class="text-danger">Laboratorio no encontrado</span>
+              <% } %>
+            </td>
+            <td><%= orden.NrofacturaProv %></td>
+            <td class="text-center text-nowrap celda-acciones">
+              <% if (usuario.role === 'administrador' || usuario.role === 'moderador') { %>
+                <button type="button"
+                        class="btn btn-sm btn-accion-editar"
+                        title="Editar"
+                        data-accion="editar"
+                        data-id="<%= orden._id %>"
+                        data-nroorden="<%= orden.NroOrdenC %>"
+                        data-fecha="<%= new Date(orden.fechaEmision).toISOString().slice(0, 10) %>"
+                        data-situacion="<%= orden.Situacion %>"
+                        data-total="<%= orden.Total %>"
+                        data-lab="<%= lab ? lab._id : '' %>"
+                        data-factura="<%= orden.NrofacturaProv %>">
+                  <i class="bi bi-pencil"></i>
+                </button>
+              <% } %>
+
+              <% if (usuario.role === 'administrador') { %>
+                <button type="button"
+                        class="btn btn-sm btn-accion-eliminar ms-1"
+                        title="Eliminar"
+                        data-accion="eliminar"
+                        data-id="<%= orden._id %>"
+                        data-nroorden="<%= orden.NroOrdenC %>">
+                  <i class="bi bi-trash"></i>
+                </button>
+              <% } %>
+
+              <% if (usuario.role === 'usuario') { %>
+                <span class="text-muted small">solo consulta</span>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="small text-muted mt-2">
+    <i class="bi bi-info-circle me-1"></i>
+    Usa el buscador de la barra superior para filtrar el listado actual (por numero, situacion, laboratorio o factura).
+  </p>
+</main>
+
+<% if (usuario.role === 'administrador' || usuario.role === 'moderador') { %>
+<!-- Modal crear / editar -->
+<div class="modal fade" id="modalOrden" tabindex="-1" aria-labelledby="tituloModalOrden" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <form class="modal-content" id="formOrden" data-validar="form-orden-compra" novalidate>
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="tituloModalOrden">Nueva Orden de Compra</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="alertaModalOrden" role="alert"></div>
+
+        <input type="hidden" name="id" id="ordenId" value="">
+
+        <div class="mb-3">
+          <label for="NroOrdenC" class="form-label">Nro. de Orden <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="NroOrdenC" name="NroOrdenC" maxlength="30"
+                 placeholder="Ej. OC-0001" autocomplete="off">
+          <div class="invalid-feedback"></div>
+        </div>
+
+        <div class="mb-3">
+          <label for="fechaEmision" class="form-label">Fecha de emision <span class="text-danger">*</span></label>
+          <input type="date" class="form-control" id="fechaEmision" name="fechaEmision">
+          <div class="invalid-feedback"></div>
+        </div>
+
+        <div class="mb-3">
+          <label for="Situacion" class="form-label">Situacion <span class="text-danger">*</span></label>
+          <select class="form-select" id="Situacion" name="Situacion">
+            <option value="">-- Selecciona --</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="En proceso">En proceso</option>
+            <option value="Completada">Completada</option>
+            <option value="Anulada">Anulada</option>
+          </select>
+          <div class="invalid-feedback"></div>
+        </div>
+
+        <div class="mb-3">
+          <label for="Total" class="form-label">Total (S/) <span class="text-danger">*</span></label>
+          <input type="number" class="form-control" id="Total" name="Total" min="0" step="0.01"
+                 placeholder="0.00" inputmode="decimal">
+          <div class="invalid-feedback"></div>
+        </div>
+
+        <div class="mb-3">
+          <label for="CodLab" class="form-label">Laboratorio <span class="text-danger">*</span></label>
+          <select class="form-select" id="CodLab" name="CodLab">
+            <option value="">-- Selecciona un laboratorio --</option>
+            <% laboratorios.forEach(function (lab) { %>
+              <option value="<%= lab._id %>"><%= lab.CodLab %> - <%= lab.razonSocial %></option>
+            <% }) %>
+          </select>
+          <div class="invalid-feedback"></div>
+        </div>
+
+        <div class="mb-2">
+          <label for="NrofacturaProv" class="form-label">Nro. factura proveedor <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="NrofacturaProv" name="NrofacturaProv" maxlength="40"
+                 placeholder="Ej. F001-000456">
+          <div class="invalid-feedback"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btnGuardarOrden">
+          <i class="bi bi-save me-1"></i> Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+<% } %>
+
+<%- include('../partials/footer', { script: 'ordenCompra.js' }) %>

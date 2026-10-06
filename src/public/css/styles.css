@@ -1,0 +1,232 @@
+:root {
+  --azul: #0d6efd;
+  --azul-oscuro: #0a58ca;
+  --azul-navbar: #0b5ed7;
+  --dorado: #ffc107;
+  --celeste-cabecera: #e8f4fb;
+}
+
+body {
+  background-color: #f7f9fc;
+  font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  min-height: 100vh;
+}
+
+/* ---------- Barra superior ---------- */
+.app-navbar {
+  background-color: var(--azul-navbar);
+  min-height: 62px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
+.brand-stack {
+  color: var(--dorado) !important;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.app-navbar .nav-link {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 500;
+}
+
+.app-navbar .nav-link:hover,
+.app-navbar .nav-link:focus {
+  color: var(--dorado);
+}
+
+.app-navbar .dropdown-menu {
+  border: 0;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  border-radius: 0.4rem;
+}
+
+.app-navbar .dropdown-item:active {
+  background-color: var(--azul);
+}
+
+/* Buscador de la barra */
+.form-control-buscar {
+  width: 190px;
+  background-color: #ffffff;
+  border: 0;
+  border-radius: 0.3rem;
+}
+
+.form-control-buscar:focus {
+  box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.55);
+}
+
+.btn-buscar {
+  background-color: var(--dorado);
+  color: #1f1f1f;
+  font-weight: 600;
+  border: 0;
+  border-radius: 0.3rem;
+}
+
+.btn-buscar:hover,
+.btn-buscar:focus {
+  background-color: #ffca2c;
+  color: #1f1f1f;
+}
+
+/* ---------- Listados ---------- */
+.tabla-listado {
+  background-color: #ffffff;
+  border: 1px solid #e3e8ef;
+}
+
+.tabla-listado thead th {
+  background-color: var(--celeste-cabecera);
+  color: #213547;
+  font-weight: 600;
+  font-size: 0.92rem;
+  border-bottom: 2px solid #cfe6f5 !important;
+  white-space: nowrap;
+}
+
+.tabla-listado tbody td {
+  background-color: #ffffff;
+  border-color: #eef1f5;
+  font-size: 0.92rem;
+  vertical-align: middle;
+}
+
+.tabla-listado tbody tr:hover td {
+  background-color: #f5fbff;
+}
+
+.tabla-listado tbody tr.fila-vacia:hover td {
+  background-color: #ffffff;
+}
+
+.celda-acciones {
+  min-width: 110px;
+}
+
+/* Botones de acciones: editar (azul) / eliminar (rojo) */
+.btn-accion-editar,
+.btn-accion-eliminar {
+  background-color: #ffffff;
+  border: 1px solid;
+  width: 34px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.3rem;
+}
+
+.btn-accion-editar {
+  border-color: var(--azul);
+  color: var(--azul);
+}
+
+.btn-accion-editar:hover {
+  background-color: var(--azul);
+  color: #ffffff;
+}
+
+.btn-accion-eliminar {
+  border-color: #dc3545;
+  color: #dc3545;
+}
+
+.btn-accion-eliminar:hover {
+  background-color: #dc3545;
+  color: #ffffff;
+}
+
+/* ---------- Modal (estilo referencia) ---------- */
+.modal-content {
+  border: 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.modal-header.bg-primary {
+  background-color: var(--azul) !important;
+}
+
+.modal .form-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.3rem;
+}
+
+.modal .form-control,
+.modal .form-select {
+  font-size: 0.95rem;
+}
+
+@media (min-width: 576px) {
+  .modal-dialog {
+    max-width: 560px;
+  }
+}
+
+/* ---------- Autenticacion ---------- */
+.contenedor-auth {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, var(--azul-navbar) 0%, #1379e6 45%, #e9f2fc 100%);
+  padding: 1.5rem 1rem;
+}
+
+.tarjeta-auth {
+  width: 100%;
+  max-width: 430px;
+  background-color: #ffffff;
+  border-radius: 0.6rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  padding: 2rem 1.75rem;
+}
+
+.marca-auth {
+  display: inline-block;
+  color: var(--azul-navbar);
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+/* ---------- Menu ---------- */
+.icono-caja {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 0.4rem;
+  background-color: var(--celeste-cabecera);
+  color: var(--azul);
+  font-size: 1.1rem;
+}
+
+/* ---------- Utilidades ---------- */
+main.container {
+  max-width: 1180px;
+}
+
+@media (max-width: 991.98px) {
+  .form-control-buscar {
+    width: 100%;
+  }
+
+  #formBusqueda {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  .app-navbar .dropdown-menu {
+    border-radius: 0.4rem;
+  }
+}

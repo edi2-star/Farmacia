@@ -1,0 +1,55 @@
+<%- include('../partials/head', { titulo: titulo }) %>
+
+<div class="contenedor-auth">
+
+  <div class="tarjeta-auth">
+    <div class="text-center mb-4">
+      <span class="marca-auth">Stack</span>
+      <p class="text-muted small mb-0">CRUD MongoDB &middot; bd_Farmacia</p>
+    </div>
+
+    <h1 class="h4 text-center mb-4">Iniciar sesion</h1>
+
+    <%- include('../partials/messages') %>
+
+    <% if (errores && errores.general) { %>
+      <div class="alert alert-danger d-flex align-items-start" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2 mt-1"></i>
+        <div><%= errores.general %></div>
+      </div>
+    <% } %>
+
+    <form id="form-login" data-validar="form-login" novalidate action="/login" method="POST">
+      <div class="mb-3">
+        <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+        <input type="email" class="form-control" id="email" name="email"
+               value="<%= datos && datos.email ? datos.email : '' %>" placeholder="tu@email.com"
+               autocomplete="email" autofocus>
+        <div class="invalid-feedback"></div>
+      </div>
+
+      <div class="mb-4">
+        <label for="password" class="form-label">Contrasena <span class="text-danger">*</span></label>
+        <input type="password" class="form-control" id="password" name="password"
+               placeholder="Tu contrasena" autocomplete="current-password">
+        <div class="invalid-feedback"></div>
+      </div>
+
+      <div class="d-grid mb-3">
+        <button type="submit" class="btn btn-primary btn-lg">
+          <i class="bi bi-box-arrow-in-right me-1"></i> Iniciar sesion
+        </button>
+      </div>
+
+      <p class="text-center small mb-0">
+        ¿No tienes cuenta? <a href="/registro">Registrate aqui</a>
+      </p>
+    </form>
+  </div>
+
+  <div class="text-center small text-muted py-3">
+    Usuarios de prueba: admin@farmacia.com &middot; moderador@farmacia.com &middot; usuario@farmacia.com
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,64 @@
+<%- include('../partials/head', { titulo: titulo }) %>
+
+<div class="contenedor-auth">
+
+  <div class="tarjeta-auth">
+    <div class="text-center mb-4">
+      <span class="marca-auth">Stack</span>
+      <p class="text-muted small mb-0">CRUD MongoDB &middot; bd_Farmacia</p>
+    </div>
+
+    <h1 class="h4 text-center mb-4">Registro de usuario</h1>
+
+    <%- include('../partials/messages') %>
+
+    <form id="form-registro" data-validar="form-registro" novalidate action="/registro" method="POST">
+      <div class="mb-3">
+        <label for="nombre" class="form-label">Nombre <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="nombre" name="nombre"
+               value="<%= datos && datos.nombre ? datos.nombre : '' %>" placeholder="Tu nombre completo"
+               autocomplete="name" autofocus>
+        <div class="invalid-feedback"></div>
+      </div>
+
+      <div class="mb-3">
+        <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+        <input type="email" class="form-control" id="email" name="email"
+               value="<%= datos && datos.email ? datos.email : '' %>" placeholder="tu@email.com"
+               autocomplete="email">
+        <div class="invalid-feedback"></div>
+      </div>
+
+      <div class="mb-3">
+        <label for="password" class="form-label">Contrasena <span class="text-danger">*</span></label>
+        <input type="password" class="form-control" id="password" name="password"
+               placeholder="Minimo 6 caracteres" autocomplete="new-password">
+        <div class="invalid-feedback"></div>
+        <div class="form-text">Minimo 6 caracteres.</div>
+      </div>
+
+      <div class="mb-4">
+        <label for="confirmarPassword" class="form-label">Confirmar contrasena <span class="text-danger">*</span></label>
+        <input type="password" class="form-control" id="confirmarPassword" name="confirmarPassword"
+               placeholder="Repite la contrasena" autocomplete="new-password">
+        <div class="invalid-feedback"></div>
+      </div>
+
+      <div class="d-grid mb-3">
+        <button type="submit" class="btn btn-primary btn-lg">
+          <i class="bi bi-person-plus me-1"></i> Registrarme
+        </button>
+      </div>
+
+      <p class="text-center small mb-0">
+        ¿Ya tienes cuenta? <a href="/login">Inicia sesion</a>
+      </p>
+
+      <p class="text-center small text-muted mb-0 mt-2">
+        El registro crea una cuenta con rol <strong>usuario</strong>.
+      </p>
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
