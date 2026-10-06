@@ -25,7 +25,7 @@ function crearPool() {
   return nuevo;
 }
 
-/** Crea las tablas si no existen (equivalente a las colecciones de MongoDB). */
+/** Crea las tablas si no existen (esquema de la base de datos relacional). */
 async function inicializarEsquema() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS usuarios (
