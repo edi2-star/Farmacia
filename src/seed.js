@@ -117,15 +117,18 @@ async function sembrarOrdenes() {
   console.log(`Ordenes de compra: ${creadas} creadas, ${actualizadas} actualizadas.`);
 }
 
+/** Inserta los datos iniciales (asume una conexion ya establecida). */
+async function sembrarInicial() {
+  await sembrarUsuarios();
+  await sembrarLaboratorios();
+  await sembrarOrdenes();
+}
+
 async function main() {
   try {
     await connectDB();
-    console.log('Cargando datos iniciales en PostgreSQL (bd_Farmacia)...');
-
-    await sembrarUsuarios();
-    await sembrarLaboratorios();
-    await sembrarOrdenes();
-
+    console.log('Cargando datos iniciales en PostgreSQL...');
+    await sembrarInicial();
     console.log('Seed finalizado correctamente.');
   } catch (err) {
     console.error('Error durante el seed:', err.message);
@@ -135,4 +138,8 @@ async function main() {
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = { sembrarInicial };
